@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.12.35707.178
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Open.SignalR.SharedClient", "Source\Open.SignalR.SharedClient.csproj", "{6282BE25-F2E0-4825-BC93-E32BDA7B5A5C}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{C89D15B3-A682-441B-B925-4D24037FCD57}"
+	ProjectSection(SolutionItems) = preProject
+		.editorconfig = .editorconfig
+		.gitignore = .gitignore
+		Directory.Build.props = Directory.Build.props
+		LICENSE = LICENSE
+		README.md = README.md
+	EndProjectSection
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{6282BE25-F2E0-4825-BC93-E32BDA7B5A5C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6282BE25-F2E0-4825-BC93-E32BDA7B5A5C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6282BE25-F2E0-4825-BC93-E32BDA7B5A5C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6282BE25-F2E0-4825-BC93-E32BDA7B5A5C}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
