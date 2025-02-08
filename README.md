@@ -1,5 +1,7 @@
 # Open.SignalR.SharedClient
 
+[![NuGet](https://img.shields.io/nuget/v/Open.SignalR.SharedClient.svg)](https://www.nuget.org/packages/Open.SignalR.SharedClient/)
+
 A scoped hub connection and provider for easily sharing SignalR connections.
 
 ## Interfaces
