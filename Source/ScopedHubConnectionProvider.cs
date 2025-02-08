@@ -1,4 +1,5 @@
 ﻿using System.Collections.Concurrent;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Open.SignalR.SharedClient;
 
@@ -6,7 +7,7 @@ namespace Open.SignalR.SharedClient;
 /// Manages persistent <see cref="HubConnection"/> instances
 /// and produces <see cref="IScopedHubConnection"/> instances for hub paths.
 /// </summary>
-public class ScopedHubConnectionProvider : IScopedHubConnectionProvider, IAsyncDisposable
+public sealed class ScopedHubConnectionProvider : IScopedHubConnectionProvider, IAsyncDisposable
 {
 	private ConcurrentDictionary<string, HubConnection>? _registry = new();
 
@@ -33,7 +34,7 @@ public class ScopedHubConnectionProvider : IScopedHubConnectionProvider, IAsyncD
 	}
 
 	/// <inheritdoc />
-	public IScopedHubConnection GetConnectionFor(string hub)
+	public IScopedHubConnection GetConnectionFor([StringSyntax(StringSyntaxAttribute.Uri)] string hub)
 	{
 		ArgumentNullException.ThrowIfNull(hub);
 		ArgumentException.ThrowIfNullOrWhiteSpace(hub);
