@@ -97,7 +97,9 @@ internal sealed class HubConnectionTracker : IDisposable
 	public IDisposable OnConnected(Func<Task> handler)
 	{
 		Connected += handler;
-		return new Subscription(() => Connected -= handler);
+		var sub = new Subscription(() => Connected -= handler);
+		//_ = EnsureStarted(CancellationToken.None);
+		return sub;
 	}
 
 	/// <summary>

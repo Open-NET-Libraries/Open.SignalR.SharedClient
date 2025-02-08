@@ -1,4 +1,5 @@
-﻿using System.Collections.Concurrent;
+﻿using Microsoft.Extensions.DependencyInjection;
+using System.Collections.Concurrent;
 using System.Diagnostics.CodeAnalysis;
 
 namespace Open.SignalR.SharedClient;
@@ -51,5 +52,20 @@ public sealed class ScopedHubConnectionProvider : IScopedHubConnectionProvider, 
 		});
 
 		return new ScopedHubConnection(hubConnection);
+	}
+}
+
+/// <summary>
+/// Extension methods for <see cref="IScopedHubConnectionProvider"/>.
+/// </summary>
+public static partial class ScopedHubConnectionProviderExtensions
+{
+	/// <summary>
+	/// Adds an <see cref="IScopedHubConnectionProvider"/> singleton to the service collection.
+	/// </summary>
+	public static IServiceCollection AddScopedHubConnectionProvider(this IServiceCollection services)
+	{
+		services.AddSingleton<IScopedHubConnectionProvider, ScopedHubConnectionProvider>();
+		return services;
 	}
 }

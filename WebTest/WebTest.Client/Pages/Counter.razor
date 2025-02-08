@@ -1,0 +1,31 @@
+﻿@page "/counter"
+@rendermode InteractiveWebAssembly
+@inject NavigationManager Navigation
+@inject IScopedHubConnectionProvider HubConnectionProvider
+@implements IDisposable
+
+<PageTitle>Counter</PageTitle>
+
+<h1>Counter</h1>
+
+<p role="status">Current count: <CounterComponent /></p>
+
+<button class="btn btn-primary" @onclick="Increment">( + )</button>
+<button class="btn btn-primary" @onclick="Decrement">( - )</button>
+
+@code {
+    private IScopedHubConnection? HubConnection;
+
+    protected override void OnInitialized()
+    {
+        HubConnection = HubConnectionProvider
+            .GetConnectionFor(Navigation.ToAbsoluteUri("/hub/counter"));
+    }
+
+    private Task Increment() => HubConnection!.SendAsync("Increment");
+    private Task Decrement() => HubConnection!.SendAsync("Decrement");
+
+    // This disposes our scoped instance but not the underlying connection.
+    public void Dispose()
+        => HubConnection?.Dispose();
+}

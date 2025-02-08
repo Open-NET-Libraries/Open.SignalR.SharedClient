@@ -1,0 +1,36 @@
+﻿@rendermode InteractiveWebAssembly
+@inject NavigationManager Navigation
+@inject IScopedHubConnectionProvider HubConnectionProvider
+@implements IDisposable
+
+@currentCount
+
+@code {
+    private int currentCount = 0;
+
+    private IScopedHubConnection? HubConnection;
+
+    protected override void OnInitialized()
+    {
+        HubConnection = HubConnectionProvider
+            .GetConnectionFor(Navigation.ToAbsoluteUri("/hub/counter"));
+
+        HubConnection.On<int>("OnNext", count =>
+        {
+            currentCount = count;
+            StateHasChanged();
+        });
+
+        HubConnection.OnConnected(async () =>
+        {
+            currentCount = await HubConnection.InvokeAsync<int>("GetLatest");
+            StateHasChanged();
+        });
+
+        base.OnInitialized();
+    }
+
+    // This disposes our scoped instance but not the underlying connection.
+    public void Dispose()
+        => HubConnection?.Dispose();
+}
