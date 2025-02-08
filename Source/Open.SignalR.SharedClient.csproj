@@ -4,8 +4,28 @@
 		<VersionSuffix>preview</VersionSuffix>
 		<GenerateDocumentationFile>true</GenerateDocumentationFile>
 		<NoWarn>IDE0130;CA1816;</NoWarn>
+		<Description>A scoped hub connection and provider for easily sharing SignalR connections.</Description>
+		<PackageTags>SignalR;HubConnection</PackageTags>
+		<PackageLicenseExpression>MIT</PackageLicenseExpression>
+		<PublishRepositoryUrl>true</PublishRepositoryUrl>
+		<IncludeSymbols>true</IncludeSymbols>
+		<SymbolPackageFormat>snupkg</SymbolPackageFormat>
+		<PackageIcon>logo.png</PackageIcon>
+		<PackageReadmeFile>README.md</PackageReadmeFile>
 	</PropertyGroup>
+	<ItemGroup>
+	  <None Include="..\README.md">
+	    <Pack>True</Pack>
+	    <PackagePath>\</PackagePath>
+	  </None>
+	</ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="9.0.1" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Update="logo.png">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
   </ItemGroup>
 </Project>

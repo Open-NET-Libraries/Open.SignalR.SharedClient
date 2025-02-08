@@ -1,6 +1,6 @@
 # Open.SignalR.SharedClient
 
-A HubConnection adapter and provider for easily sharing SignalR connections.
+A scoped hub connection and provider for easily sharing SignalR connections.
 
 ## Interfaces
 
