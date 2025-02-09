@@ -54,7 +54,7 @@ internal sealed class HubConnectionTracker : IDisposable
 					return Task.CompletedTask;
 
 				ConnectedCore -= handler;
-				if(_hubConnection is null)
+				if (_hubConnection is null)
 					return Task.CompletedTask;
 
 				ConnectedCore += value;
@@ -124,7 +124,7 @@ internal sealed class HubConnectionTracker : IDisposable
 		connection = Interlocked.CompareExchange(ref _hubConnection, null, connection);
 		if (connection is null) return;
 
-		lock(connection) _startAsync = _reconnectingAsync = null;
+		lock (connection) _startAsync = _reconnectingAsync = null;
 		// Clear any listeners.
 		ConnectedCore = null;
 
@@ -137,7 +137,7 @@ internal sealed class HubConnectionTracker : IDisposable
 	{
 		// Disposed?
 		var connection = _hubConnection;
-		if(connection is null)
+		if (connection is null)
 			return Task.CompletedTask;
 
 		lock (connection)
@@ -206,34 +206,32 @@ internal sealed class HubConnectionTracker : IDisposable
 			if (startAsync is not null)
 				return startAsync;
 
-			_startAsync = Connection.State switch
+			_startAsync = startAsync = Connection.State switch
 			{
-				HubConnectionState.Connected => startAsync = Task.CompletedTask,
-				HubConnectionState.Disconnected => startAsync = connection.StartAsync(cancellationToken),
-				_ => startAsync = Task.Run(async () =>
+				HubConnectionState.Connected => Task.CompletedTask,
+				HubConnectionState.Disconnected => connection.StartAsync(cancellationToken),
+				_ => Task.Run(async () =>
 				{
-					int msDelay = 100;
 					var state = HubConnectionState.Disconnected;
 
-					for (int i = 0; i < 7; i++)
+					for (int i = 0; i < 50; i++)
 					{
 						// Maybe TaskCanceledException?
-						ObjectDisposedException.ThrowIf(_hubConnection is null,nameof(HubConnectionTracker));
+						ObjectDisposedException.ThrowIf(_hubConnection is null, nameof(HubConnectionTracker));
 
 						state = connection.State;
 						if (state is HubConnectionState.Connected)
-							break;
+							return;
 
 						cancellationToken.ThrowIfCancellationRequested();
 
 						if (state is HubConnectionState.Disconnected)
 						{
 							await Connection.StartAsync(cancellationToken);
-							break;
+							return;
 						}
 
-						await Task.Delay(msDelay, cancellationToken);
-						msDelay *= 2;
+						await Task.Delay(200, cancellationToken);
 					}
 
 					lock (connection)

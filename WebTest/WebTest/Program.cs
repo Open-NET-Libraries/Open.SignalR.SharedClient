@@ -11,8 +11,8 @@ services.AddRazorComponents()
 // Add SignalR Configuration
 // https://learn.microsoft.com/en-us/aspnet/core/blazor/tutorials/signalr-blazor?view=aspnetcore-9.0&tabs=visual-studio
 services.AddSignalR();
-services.AddResponseCompression(
-	opts => opts.MimeTypes = Microsoft.AspNetCore.ResponseCompression.ResponseCompressionDefaults.MimeTypes.Concat(["application/octet-stream"]));
+//services.AddResponseCompression(
+//	opts => opts.MimeTypes = Microsoft.AspNetCore.ResponseCompression.ResponseCompressionDefaults.MimeTypes.Concat(["application/octet-stream"]));
 
 services.AddSingleton<CountService>();
 
@@ -40,7 +40,7 @@ app.MapRazorComponents<App>()
 	.AddInteractiveWebAssemblyRenderMode()
 	.AddAdditionalAssemblies(typeof(WebTest.Client._Imports).Assembly);
 
-app.UseResponseCompression();
+//app.UseResponseCompression();
 app.MapHub<CounterHub>("/hub/counter");
 
 await app.RunAsync();

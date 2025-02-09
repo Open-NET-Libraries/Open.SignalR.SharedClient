@@ -8,10 +8,18 @@
 
 <h1>Counter</h1>
 
-<p role="status">Current count: <CounterComponent /></p>
-
 <button class="btn btn-primary" @onclick="Increment">( + )</button>
 <button class="btn btn-primary" @onclick="Decrement">( - )</button>
+
+<p>Check the network tab, there should be only one socket connetion to /hub/counter</p>
+<p role="status"><CounterComponent /></p>
+<p role="status"><CounterComponent /></p>
+<p role="status"><CounterComponent /></p>
+<p role="status"><CounterComponent /></p>
+<p role="status"><CounterComponent /></p>
+<p role="status"><CounterComponent /></p>
+<p role="status"><CounterComponent /></p>
+
 
 @code {
     private IScopedHubConnection? HubConnection;
