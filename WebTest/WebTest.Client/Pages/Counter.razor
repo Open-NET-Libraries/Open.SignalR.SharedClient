@@ -8,21 +8,32 @@
 
 <h1>Counter</h1>
 
-<button class="btn btn-primary" @onclick="Increment">( + )</button>
-<button class="btn btn-primary" @onclick="Decrement">( - )</button>
+<button class="btn btn-secondary" @onclick="Increment">( + )</button>
+<button class="btn btn-secondary" @onclick="Decrement">( - )</button>
 
 <p>Check the network tab, there should be only one socket connetion to /hub/counter</p>
-<p role="status"><CounterComponent /></p>
-<p role="status"><CounterComponent /></p>
-<p role="status"><CounterComponent /></p>
-<p role="status"><CounterComponent /></p>
-<p role="status"><CounterComponent /></p>
-<p role="status"><CounterComponent /></p>
-<p role="status"><CounterComponent /></p>
+
+<div>
+    <button class="btn btn-primary" @onclick="AddAnotherCounter">Add Another</button>
+    @if (repeat > 1)
+    {
+        <span> </span>
+        <button class="btn btn-secondary" @onclick="RemoveCounter">Remove One</button>
+    }
+</div>
+<hr />
+
+@for (var i = 0; i < repeat; i++)
+{
+    <p role="status"><CounterComponent />&nbsp;</p>
+}
+
 
 
 @code {
     private IScopedHubConnection? HubConnection;
+
+    private int repeat = 1;
 
     protected override void OnInitialized()
     {
@@ -32,6 +43,19 @@
 
     private Task Increment() => HubConnection!.SendAsync("Increment");
     private Task Decrement() => HubConnection!.SendAsync("Decrement");
+
+    private void AddAnotherCounter()
+    {
+        repeat++;
+        StateHasChanged();
+    }
+
+    private void RemoveCounter()
+    {
+        if (repeat == 1) return;
+        repeat--;
+        StateHasChanged();
+    }
 
     // This disposes our scoped instance but not the underlying connection.
     public void Dispose()

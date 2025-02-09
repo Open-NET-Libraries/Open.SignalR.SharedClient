@@ -1,6 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<VersionPrefix>1.0.1</VersionPrefix>
+		<VersionPrefix>1.0.2</VersionPrefix>
 		<VersionSuffix>preview</VersionSuffix>
 		<GenerateDocumentationFile>true</GenerateDocumentationFile>
 		<NoWarn>IDE0130;CA1816;</NoWarn>

@@ -40,7 +40,7 @@ internal sealed class HubConnectionTracker(IHubConnectionAdapter hubConnection) 
 				if (!_connectedEventHandlers.TryAdd(value, value))
 					return Task.CompletedTask;
 
-				connection.Connected += value;
+				connection.AddConnectedListener(value);
 				return value();
 			}
 
@@ -49,7 +49,7 @@ internal sealed class HubConnectionTracker(IHubConnectionAdapter hubConnection) 
 				return;
 
 			// Handles calling the handler immediately if already connected.
-			connection.Connected += LocalHandler;
+			connection.AddConnectedListener(LocalHandler);
 		}
 
 		remove
