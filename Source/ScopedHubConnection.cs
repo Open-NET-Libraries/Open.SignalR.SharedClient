@@ -1,9 +1,17 @@
 ﻿namespace Open.SignalR.SharedClient;
 
 /// <inheritdoc />
-internal sealed class ScopedHubConnection(IHubConnectionAdapter connection) : IScopedHubConnection
+internal sealed class ScopedHubConnection : IScopedHubConnection
 {
-	private readonly HubConnectionTracker _tracker = new(connection);
+	public ScopedHubConnection(IHubConnectionAdapter connection)
+	{
+		_connection = connection;
+		connection.StartScope();
+		_tracker = new(connection);
+	}
+
+	private readonly IHubConnectionAdapter _connection;
+	private readonly HubConnectionTracker _tracker;
 	private readonly HubSubscriptionManager _subs = new();
 
 	/// <summary>
@@ -41,6 +49,8 @@ internal sealed class ScopedHubConnection(IHubConnectionAdapter connection) : IS
 
 		// Dispose the connection tracker.
 		_tracker.Dispose();
+
+		_connection.EndScope();
 	}
 
 	#region RPC Methods
@@ -49,13 +59,13 @@ internal sealed class ScopedHubConnection(IHubConnectionAdapter connection) : IS
 		string methodName, object?[] args,
 		CancellationToken cancellationToken = default)
 		// No cancellation managment needed here. Fire and forget.
-		=> connection.SendCoreAsync(methodName, args, cancellationToken);
+		=> _connection.SendCoreAsync(methodName, args, cancellationToken);
 
 	/// <inheritdoc />
 	public Task<object?> InvokeCoreAsync(
 		string methodName, Type returnType, object?[] args,
 		CancellationToken cancellationToken = default)
-		=> connection.InvokeCoreAsync(methodName, returnType, args, cancellationToken);
+		=> _connection.InvokeCoreAsync(methodName, returnType, args, cancellationToken);
 	#endregion
 
 	#region CancellationToken Management
@@ -107,7 +117,7 @@ internal sealed class ScopedHubConnection(IHubConnectionAdapter connection) : IS
 		// Otherwise just use the underlying CanellationToken.
 		return cancellationToken.CanBeCanceled
 			? StreamAsChannelCoreAsync()
-			: connection.StreamAsChannelCoreAsync(methodName, returnType, args, _cts.Token);
+			: _connection.StreamAsChannelCoreAsync(methodName, returnType, args, _cts.Token);
 
 		async Task<ChannelReader<object?>> StreamAsChannelCoreAsync()
 		{
@@ -117,7 +127,7 @@ internal sealed class ScopedHubConnection(IHubConnectionAdapter connection) : IS
 			ChannelReader<object?>? reader = null;
 			try
 			{
-				reader = await connection
+				reader = await _connection
 					.StreamAsChannelCoreAsync(methodName, returnType, args, cts.Token)
 					.ConfigureAwait(false);
 			}
@@ -148,7 +158,7 @@ internal sealed class ScopedHubConnection(IHubConnectionAdapter connection) : IS
 		var token = cts?.Token ?? _cts.Token;
 		try
 		{
-			await foreach (var e in connection
+			await foreach (var e in _connection
 				.StreamAsyncCore<TResult>(methodName, args, token)
 				.ConfigureAwait(false))
 			{
@@ -169,14 +179,14 @@ internal sealed class ScopedHubConnection(IHubConnectionAdapter connection) : IS
 		Func<object?[], object, Task<object?>> handler, object state)
 	{
 		ArgumentNullException.ThrowIfNullOrWhiteSpace(methodName);
-		return _subs.Subscribe(methodName, connection.On(methodName, parameterTypes, handler, state));
+		return _subs.Subscribe(methodName, _connection.On(methodName, parameterTypes, handler, state));
 	}
 
 	/// <inheritdoc />
 	public IDisposable On(string methodName, Type[] parameterTypes, Func<object?[], object, Task> handler, object state)
 	{
 		ArgumentNullException.ThrowIfNullOrWhiteSpace(methodName);
-		return _subs.Subscribe(methodName, connection.On(methodName, parameterTypes, handler, state));
+		return _subs.Subscribe(methodName, _connection.On(methodName, parameterTypes, handler, state));
 	}
 
 	/// <inheritdoc />

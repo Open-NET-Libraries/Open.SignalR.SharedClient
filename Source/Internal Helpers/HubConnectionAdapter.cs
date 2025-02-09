@@ -1,4 +1,6 @@
-﻿namespace Open.SignalR.SharedClient;
+﻿using System.Threading.Tasks;
+
+namespace Open.SignalR.SharedClient;
 
 /// <inheritdoc />
 internal class HubConnectionAdapter : IHubConnectionAdapter
@@ -22,6 +24,50 @@ internal class HubConnectionAdapter : IHubConnectionAdapter
 	private HubConnection? _hubConnection;
 	public HubConnection Connection
 		=> _hubConnection ?? throw new ObjectDisposedException(nameof(HubConnectionAdapter));
+
+	private int _scopeCount;
+	private Task? _scopeCheck;
+
+	/// <inheritdoc />
+	public void StartScope()
+	{
+		lock(_sync)
+		{
+			_scopeCount++;
+			_scopeCheck = null;
+		}
+	}
+
+	/// <inheritdoc />
+	public void EndScope()
+	{
+		lock (_sync)
+		{
+			if (--_scopeCount != 0)
+				return;
+
+			Task newScopeCheck = _scopeCheck = Task.Delay(5000);
+			newScopeCheck.ContinueWith(OnScopeZero, TaskContinuationOptions.ExecuteSynchronously);
+		}
+	}
+
+	private void OnScopeZero(Task scopeCheck)
+	{
+		if (_scopeCheck != scopeCheck || _scopeCount != 0)
+			return;
+
+		lock (_sync)
+		{
+			if (_scopeCount != 0)
+				return;
+
+			_scopeCheck = null;
+			_startAsync = null;
+			_reconnectingAsync = null;
+
+			_hubConnection?.StopAsync();
+		}
+	}
 
 	/// <inheritdoc />
 	public event Func<Task>? Connected;
@@ -54,6 +100,7 @@ internal class HubConnectionAdapter : IHubConnectionAdapter
 		lock(_sync)
 		{
 			Connected = null;
+			_scopeCheck = null;
 			_startAsync = null;
 			var reconnectingAsync = _reconnectingAsync;
 			_reconnectingAsync = null;

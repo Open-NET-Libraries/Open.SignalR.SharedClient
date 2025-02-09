@@ -1,7 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<VersionPrefix>1.0.2</VersionPrefix>
-		<VersionSuffix>preview</VersionSuffix>
+		<Version>1.0.3</Version>
 		<GenerateDocumentationFile>true</GenerateDocumentationFile>
 		<NoWarn>IDE0130;CA1816;</NoWarn>
 		<Description>A scoped hub connection and provider for easily sharing SignalR connections.</Description>
