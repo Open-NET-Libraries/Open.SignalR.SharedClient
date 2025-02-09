@@ -1,10 +1,7 @@
-﻿using System.Diagnostics.Contracts;
-using System.Runtime.CompilerServices;
-
-namespace Open.SignalR.SharedClient;
+﻿namespace Open.SignalR.SharedClient;
 
 /// <inheritdoc />
-public sealed class ScopedHubConnection(HubConnection connection) : IScopedHubConnection
+internal sealed class ScopedHubConnection(IHubConnectionAdapter connection) : IScopedHubConnection
 {
 	private readonly HubConnectionTracker _tracker = new(connection);
 	private readonly HubSubscriptionManager _subs = new();
@@ -52,21 +49,13 @@ public sealed class ScopedHubConnection(HubConnection connection) : IScopedHubCo
 		string methodName, object?[] args,
 		CancellationToken cancellationToken = default)
 		// No cancellation managment needed here. Fire and forget.
-		=> _tracker
-			.EnsureStarted(cancellationToken)
-			.ContinueWith(_ => _tracker.Connection.SendCoreAsync(methodName, args, cancellationToken),
-				TaskContinuationOptions.OnlyOnRanToCompletion | TaskContinuationOptions.ExecuteSynchronously)
-			.Unwrap();
+		=> connection.SendCoreAsync(methodName, args, cancellationToken);
 
 	/// <inheritdoc />
 	public Task<object?> InvokeCoreAsync(
 		string methodName, Type returnType, object?[] args,
 		CancellationToken cancellationToken = default)
-		=> _tracker
-			.EnsureStarted(cancellationToken)
-			.ContinueWith(_ => _tracker.Connection.InvokeCoreAsync(methodName, returnType, args, cancellationToken),
-				TaskContinuationOptions.OnlyOnRanToCompletion | TaskContinuationOptions.ExecuteSynchronously)
-			.Unwrap();
+		=> connection.InvokeCoreAsync(methodName, returnType, args, cancellationToken);
 	#endregion
 
 	#region CancellationToken Management
@@ -76,10 +65,9 @@ public sealed class ScopedHubConnection(HubConnection connection) : IScopedHubCo
 
 	private CancellationTokenSource? AddCtsInstance(CancellationToken incommingToken)
 	{
-		if (!incommingToken.CanBeCanceled) return null;
-
 		var instances = _ctsInstances;
 		ObjectDisposedException.ThrowIf(instances is null, this);
+		if (!incommingToken.CanBeCanceled) return null;
 
 		lock (_ctsSync)
 		{
@@ -117,17 +105,11 @@ public sealed class ScopedHubConnection(HubConnection connection) : IScopedHubCo
 
 		// If the token is cancellable, then use the local method.
 		// Otherwise just use the underlying CanellationToken.
-		Func<Task, Task<ChannelReader<object?>>> closure
-			= cancellationToken.CanBeCanceled
-			? StreamAsChannelCoreAsync
-			: (Task _) => _tracker.Connection.StreamAsChannelCoreAsync(methodName, returnType, args, _cts.Token);
+		return cancellationToken.CanBeCanceled
+			? StreamAsChannelCoreAsync()
+			: connection.StreamAsChannelCoreAsync(methodName, returnType, args, _cts.Token);
 
-		return _tracker
-			.EnsureStarted(cancellationToken)
-			.ContinueWith(closure, TaskContinuationOptions.OnlyOnRanToCompletion | TaskContinuationOptions.ExecuteSynchronously)
-			.Unwrap();
-
-		async Task<ChannelReader<object?>> StreamAsChannelCoreAsync(Task _)
+		async Task<ChannelReader<object?>> StreamAsChannelCoreAsync()
 		{
 			using var cts = AddCtsInstance(cancellationToken);
 			Debug.Assert(cts is not null); // Because we checked above if it can be cancelled.
@@ -135,7 +117,7 @@ public sealed class ScopedHubConnection(HubConnection connection) : IScopedHubCo
 			ChannelReader<object?>? reader = null;
 			try
 			{
-				reader = await _tracker.Connection
+				reader = await connection
 					.StreamAsChannelCoreAsync(methodName, returnType, args, cts.Token)
 					.ConfigureAwait(false);
 			}
@@ -166,7 +148,7 @@ public sealed class ScopedHubConnection(HubConnection connection) : IScopedHubCo
 		var token = cts?.Token ?? _cts.Token;
 		try
 		{
-			await foreach (var e in _tracker.Connection
+			await foreach (var e in connection
 				.StreamAsyncCore<TResult>(methodName, args, token)
 				.ConfigureAwait(false))
 			{
@@ -187,14 +169,14 @@ public sealed class ScopedHubConnection(HubConnection connection) : IScopedHubCo
 		Func<object?[], object, Task<object?>> handler, object state)
 	{
 		ArgumentNullException.ThrowIfNullOrWhiteSpace(methodName);
-		return _subs.Subscribe(methodName, _tracker.Connection.On(methodName, parameterTypes, handler, state));
+		return _subs.Subscribe(methodName, connection.On(methodName, parameterTypes, handler, state));
 	}
 
 	/// <inheritdoc />
 	public IDisposable On(string methodName, Type[] parameterTypes, Func<object?[], object, Task> handler, object state)
 	{
 		ArgumentNullException.ThrowIfNullOrWhiteSpace(methodName);
-		return _subs.Subscribe(methodName, _tracker.Connection.On(methodName, parameterTypes, handler, state));
+		return _subs.Subscribe(methodName, connection.On(methodName, parameterTypes, handler, state));
 	}
 
 	/// <inheritdoc />
@@ -209,5 +191,5 @@ public sealed class ScopedHubConnection(HubConnection connection) : IScopedHubCo
 	public IDisposable OnConnected(Func<Task> handler)
 		=> _subs.Subscribe(string.Empty, _tracker.OnConnected(() => handler()));
 
-	// ^^^ See IHubAdapter.cs for extension methods related to this.
+	// ^^^ See IScopedHubConnection.cs for extension methods related to this.
 }

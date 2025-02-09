@@ -1,8 +1,4 @@
-﻿using Microsoft.Extensions.DependencyInjection;
-using System.Collections.Concurrent;
-using System.Diagnostics.CodeAnalysis;
-
-namespace Open.SignalR.SharedClient;
+﻿namespace Open.SignalR.SharedClient;
 
 /// <summary>
 /// Manages persistent <see cref="HubConnection"/> instances
@@ -10,7 +6,7 @@ namespace Open.SignalR.SharedClient;
 /// </summary>
 public sealed class ScopedHubConnectionProvider : IScopedHubConnectionProvider, IAsyncDisposable
 {
-	private ConcurrentDictionary<string, HubConnection>? _registry = new();
+	private ConcurrentDictionary<string, HubConnectionAdapter>? _registry = new();
 
 	/// <summary>
 	/// Disposes of this and all managed <see cref="HubConnection"/> instances.
@@ -35,23 +31,13 @@ public sealed class ScopedHubConnectionProvider : IScopedHubConnectionProvider, 
 	}
 
 	/// <inheritdoc />
-	public IScopedHubConnection GetConnectionFor([StringSyntax(StringSyntaxAttribute.Uri)] string hub)
+	public IScopedHubConnection GetConnectionFor([StringSyntax(StringSyntaxAttribute.Uri)] string hubUrl)
 	{
-		ArgumentNullException.ThrowIfNull(hub);
-		ArgumentException.ThrowIfNullOrWhiteSpace(hub);
+		ArgumentNullException.ThrowIfNull(hubUrl);
+		ArgumentException.ThrowIfNullOrWhiteSpace(hubUrl);
 		var reg = _registry;
 		ObjectDisposedException.ThrowIf(reg is null, nameof(ScopedHubConnectionProvider));
-
-		var hubConnection = reg.GetOrAdd(hub, k =>
-		{
-			var builder = new HubConnectionBuilder();
-			return builder
-				.WithUrl(k)
-				.WithAutomaticReconnect()
-				.Build();
-		});
-
-		return new ScopedHubConnection(hubConnection);
+		return new ScopedHubConnection(reg.GetOrAdd(hubUrl, k => new HubConnectionAdapter(k)));
 	}
 }
 
