@@ -8,7 +8,7 @@ public class CountService
 
 	public CountService(IHubContext<CounterHub> hubContext)
 	{
-		_channel = Channel.CreateBounded<int>(100);
+		_channel = Channel.CreateBounded<int>(new BoundedChannelOptions(100) { SingleReader = true });
 		_ = _channel.Reader
 			.TaskReadAllAsync(value => hubContext.Clients.All.SendAsync("OnNext", value))
 			.AsTask();

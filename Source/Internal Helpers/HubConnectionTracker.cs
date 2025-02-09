@@ -17,7 +17,7 @@ internal sealed class HubConnectionTracker : IDisposable
 		hubConnection.Reconnected += OnReconnected;
 
 		// Events could have fired and changed the state, so check if we're already connected.
-		lock (_startLock)
+		lock (hubConnection)
 		{
 			if (_startAsync is null
 			&& hubConnection.State == HubConnectionState.Connected)
@@ -30,7 +30,6 @@ internal sealed class HubConnectionTracker : IDisposable
 	#region HubConnection & Events Management
 	private HubConnection? _hubConnection;
 
-	readonly Lock _startLock = new();
 	Task? _startAsync;
 	Task? _reconnectingAsync;
 
@@ -45,7 +44,7 @@ internal sealed class HubConnectionTracker : IDisposable
 	{
 		add
 		{
-			AssertIsAlive();
+			ObjectDisposedException.ThrowIf(_hubConnection is null, nameof(HubConnectionTracker));
 			ArgumentNullException.ThrowIfNull(value, nameof(value));
 
 			Task LocalHandler()
@@ -55,6 +54,9 @@ internal sealed class HubConnectionTracker : IDisposable
 					return Task.CompletedTask;
 
 				ConnectedCore -= handler;
+				if(_hubConnection is null)
+					return Task.CompletedTask;
+
 				ConnectedCore += value;
 				return value();
 			}
@@ -98,7 +100,7 @@ internal sealed class HubConnectionTracker : IDisposable
 	{
 		Connected += handler;
 		var sub = new Subscription(() => Connected -= handler);
-		//_ = EnsureStarted(CancellationToken.None);
+		_ = EnsureStarted(CancellationToken.None);
 		return sub;
 	}
 
@@ -122,7 +124,7 @@ internal sealed class HubConnectionTracker : IDisposable
 		connection = Interlocked.CompareExchange(ref _hubConnection, null, connection);
 		if (connection is null) return;
 
-		lock(_startLock) _startAsync = _reconnectingAsync = null;
+		lock(connection) _startAsync = _reconnectingAsync = null;
 		// Clear any listeners.
 		ConnectedCore = null;
 
@@ -131,12 +133,14 @@ internal sealed class HubConnectionTracker : IDisposable
 		connection.Reconnected -= OnReconnected;
 	}
 
-	private void AssertIsAlive()
-		=> ObjectDisposedException.ThrowIf(_hubConnection is null, typeof(HubConnectionTracker));
-
 	private Task OnClosed(Exception? _)
 	{
-		lock (_startLock)
+		// Disposed?
+		var connection = _hubConnection;
+		if(connection is null)
+			return Task.CompletedTask;
+
+		lock (connection)
 			_startAsync = null;
 
 		return Task.CompletedTask;
@@ -144,7 +148,12 @@ internal sealed class HubConnectionTracker : IDisposable
 
 	private Task OnReconnecting(Exception? _)
 	{
-		lock (_startLock)
+		// Disposed?
+		var connection = _hubConnection;
+		if (connection is null)
+			return Task.CompletedTask;
+
+		lock (connection)
 		{
 			// It's possible that OnReconnected could have been called we arrive here.
 			if (_startAsync is not null)
@@ -160,8 +169,13 @@ internal sealed class HubConnectionTracker : IDisposable
 
 	private Task OnReconnected(string? _)
 	{
+		// Disposed?
+		var connection = _hubConnection;
+		if (connection is null)
+			return Task.CompletedTask;
+
 		Task? reconnectingAsync;
-		lock (_startLock)
+		lock (connection)
 		{
 			reconnectingAsync = _reconnectingAsync;
 			_reconnectingAsync = null;
@@ -179,20 +193,59 @@ internal sealed class HubConnectionTracker : IDisposable
 	/// </summary>
 	public Task EnsureStarted(CancellationToken cancellationToken)
 	{
-		AssertIsAlive();
+		// Will throw if disposed.
+		var connection = Connection;
+
 		var startAsync = _startAsync;
 		if (startAsync is not null)
 			return startAsync;
 
-		lock (_startLock)
+		lock (connection)
 		{
 			startAsync = _startAsync;
 			if (startAsync is not null)
 				return startAsync;
 
-			// Start the connection and return the task.
-			_startAsync = startAsync = Connection
-				.StartAsync(cancellationToken);
+			_startAsync = Connection.State switch
+			{
+				HubConnectionState.Connected => startAsync = Task.CompletedTask,
+				HubConnectionState.Disconnected => startAsync = connection.StartAsync(cancellationToken),
+				_ => startAsync = Task.Run(async () =>
+				{
+					int msDelay = 100;
+					var state = HubConnectionState.Disconnected;
+
+					for (int i = 0; i < 7; i++)
+					{
+						// Maybe TaskCanceledException?
+						ObjectDisposedException.ThrowIf(_hubConnection is null,nameof(HubConnectionTracker));
+
+						state = connection.State;
+						if (state is HubConnectionState.Connected)
+							break;
+
+						cancellationToken.ThrowIfCancellationRequested();
+
+						if (state is HubConnectionState.Disconnected)
+						{
+							await Connection.StartAsync(cancellationToken);
+							break;
+						}
+
+						await Task.Delay(msDelay, cancellationToken);
+						msDelay *= 2;
+					}
+
+					lock (connection)
+					{
+						if (_startAsync == startAsync)
+							_startAsync = null;
+					}
+
+					throw new TimeoutException(
+						$"Could not complete the connection in a timely manner: Latest state is {state}");
+				}, cancellationToken),
+			};
 		}
 
 		startAsync.ContinueWith(
@@ -204,7 +257,7 @@ internal sealed class HubConnectionTracker : IDisposable
 		startAsync.ContinueWith(t =>
 		{
 			if (_startAsync != t) return;
-			lock (_startLock)
+			lock (connection)
 			{
 				if (_startAsync != t) return;
 				_startAsync = null;
