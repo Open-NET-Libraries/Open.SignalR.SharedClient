@@ -1,5 +1,3 @@
-using Open.SignalR.SharedClient;
-
 var builder = WebApplication.CreateBuilder(args);
 var services = builder.Services;
 
@@ -17,8 +15,7 @@ services.AddSignalR();
 services.AddSingleton<CountService>();
 
 // Needs to be registered here so that WebAssembly doesn't freak out.
-builder.Services
-	.AddScopedHubConnectionProvider();
+builder.Services.AddAppHubConnections();
 
 var app = builder.Build();
 

@@ -4,3 +4,4 @@ global using WebTest.Hubs;
 global using Microsoft.AspNetCore.SignalR;
 global using System.Threading.Channels;
 global using Open.ChannelExtensions;
+global using WebTest.Client;

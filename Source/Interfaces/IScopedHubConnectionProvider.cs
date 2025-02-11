@@ -9,6 +9,12 @@ public interface IScopedHubConnectionProvider
 	/// Gets a <see cref="IScopedHubConnection"/> instance for the specified hub path.
 	/// </summary>
 	IScopedHubConnection GetConnectionFor(string hubUrl);
+
+	/// <summary>
+	/// Gets a <see cref="IScopedHubConnection"/> instance by the configured hub name.
+	/// </summary>
+	/// <remarks>Allows for more complex hub configurations when setting up DI services.</remarks>
+	IScopedHubConnection GetGonnectionByName(string configuredHubName);
 }
 
 public static partial class ScopedHubConnectionProviderExtensions

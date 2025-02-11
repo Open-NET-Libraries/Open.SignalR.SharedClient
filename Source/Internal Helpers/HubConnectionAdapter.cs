@@ -5,17 +5,20 @@ namespace Open.SignalR.SharedClient;
 /// <inheritdoc />
 internal class HubConnectionAdapter : IHubConnectionAdapter
 {
-	public HubConnectionAdapter([StringSyntax(StringSyntaxAttribute.Uri)] string hub)
+	public HubConnectionAdapter(IHubConnectionBuilder hubConnectionBuilder)
 	{
-		var conn = _hubConnection = new HubConnectionBuilder()
-			.WithUrl(hub)
-			.WithAutomaticReconnect()
-			.Build();
-
+		var conn = _hubConnection = hubConnectionBuilder.Build();
 		conn.Closed += OnClosed;
 		conn.Reconnecting += OnReconnecting;
 		conn.Reconnected += OnReconnected;
 	}
+
+	public HubConnectionAdapter([StringSyntax(StringSyntaxAttribute.Uri)] string hub)
+		: this(new HubConnectionBuilder()
+			.WithUrl(hub)
+			.WithAutomaticReconnect())
+	{ }
+
 	private readonly Lock _sync = new();
 
 	private Task? _startAsync;

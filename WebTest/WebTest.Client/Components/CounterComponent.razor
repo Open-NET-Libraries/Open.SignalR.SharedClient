@@ -1,5 +1,4 @@
 ﻿@rendermode InteractiveWebAssembly
-@inject NavigationManager Navigation
 @inject IScopedHubConnectionProvider HubConnectionProvider
 @implements IDisposable
 
@@ -13,7 +12,7 @@
     protected override void OnInitialized()
     {
         HubConnection = HubConnectionProvider
-            .GetConnectionFor(Navigation.ToAbsoluteUri("/hub/counter"));
+            .GetGonnectionByName("counter");
 
         HubConnection.On<int>("OnNext", count =>
         {
