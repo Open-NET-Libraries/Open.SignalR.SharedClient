@@ -18,40 +18,70 @@ but leaves the connection intact for others to use.
 
 #### Default
 
+The following adds a default provider as a singleton to the service collection.   
 Assumes the consumers will know which URL to ask for.
 
 ```csharp
 services.AddScopedHubConnectionProvider();
 ```
 
-Consumers use `.GetConnectionFor(url)` to get a hub connection.
+Consumers use `IScopedHubConnectionProvider.GetConnectionFor(url)` to get a hub connection.
 
 
 #### With Named Connections
 
-Allows for any hub configuration to be added and retrieved by name.
+Consumers use `INamedScopedHubConnectionFactory.GetGonnectionByName(hubName)` to get a hub connection.  
+This is necessary to ensure `NavigationManager` or other scope isolated services/resources are not used in a singleton context.
 
 > Note: Client/Server hybrid apps will need to replicate the DI setup on the server side.
 
+##### With Simple URL Mapping
 ```csharp
-services.AddScopedHubConnectionProvider(serviceProvider => {
-	var nav = serviceProvider.GetRequiredService<NavigationManager>();
-	return [
-		// Hub 1
-		KeyValuePair.Create("hub1",
-			new HubConnectionBuilder()
-			.WithAutomaticReconnect()
-			.WithUrl(nav.ToAbsoluteUri("/hubs/hub1"))),
+public static class AppServicesConfiguration
+{
+	/// <summary>
+	/// Provided to keep the client and server DI in sync.
+	/// </summary>
+	public static IServiceCollection AddAppHubConnections(this IServiceCollection services)
+		=> services
+		.AddScopedHubConnectionProvider()
+		.AddNamedScopedHubConnectionMapping(serviceProvider => hubName => hubName switch
+		{
+			"hub1" => serviceProvider.ToAbsoluteUri("/hub/hub1"),
+			"counter" => serviceProvider.ToAbsoluteUri("/hub/counter"),
+			_ => null, // Returning null will signal that the name was not found and throw appropritately.
+		});
 
-		// Hub 2
-		KeyValuePair.Create("hub2",
-			new HubConnectionBuilder()
-			.WithUrl(nav.ToAbsoluteUri("/hubs/hub2")))
-	];
-});
+	/// <summary>
+	/// Shortcut for <see cref="NavigationManager"/>.
+	/// </summary>
+	public static Uri ToAbsoluteUri(this IServiceProvider sp, string path)
+		=> sp.GetRequiredService<NavigationManager>().ToAbsoluteUri(path);
+}
 ```
 
-Consumers use `.GetGonnectionByName(hubName)` to get a hub connection.
+##### Custom DI Config
+
+```csharp
+services
+		.AddScopedHubConnectionProvider()
+		.AddNamedScopedHubConnectionFactory(serviceProvider => hubName => hubName switch
+		{
+			// With Automatic Reconnnect
+			"hub1" => (serviceProvider.ToAbsoluteUri("/hub/hub1"),
+				uri => new HubConnectionBuilder().WithAutomaticReconnect().WithUrl(uri)
+			),
+
+			// With Stateful Reconnect
+			"hub2" => (serviceProvider.ToAbsoluteUri("/hub/hub1"),
+				uri => new HubConnectionBuilder().WithStatefulReconnect().WithUrl(uri)
+			),
+
+			_ => (null, null)
+		});
+```
+
+
 
 ### Example
 
@@ -60,7 +90,7 @@ Consumers use `.GetGonnectionByName(hubName)` to get a hub connection.
 public class MyService : IDisposable
 {
 	private readonly IScopedHubConnection _hub;
-	public MyService(IScopedHubConnectionProvider connectionProvider)
+	public MyService(INamedScopedHubConnectionFactory connectionProvider)
 	{
 		_hub = connectionProvider.GetConnectionByNam("hub1");
 

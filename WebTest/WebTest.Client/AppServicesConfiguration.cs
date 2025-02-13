@@ -5,41 +5,39 @@ namespace WebTest.Client;
 
 public static class AppServicesConfiguration
 {
-	class FakeNavigationManager : NavigationManager
-	{
-		public FakeNavigationManager()
-			=> Initialize("http://localhost/", "http://localhost/");
-	}
-
 	/// <summary>
 	/// Provided to keep the client and server DI in sync.
 	/// </summary>
 	public static IServiceCollection AddAppHubConnections(this IServiceCollection services)
-		=> services.AddScopedHubConnectionProvider(serviceProvider => {
+		=> services
+		.AddScopedHubConnectionProvider()
+		.AddNamedScopedHubConnectionMapping(serviceProvider => hubName => hubName switch
+		{
+			"hub1" => serviceProvider.ToAbsoluteUri("/hub/hub1"),
+			"counter" => serviceProvider.ToAbsoluteUri("/hub/counter"),
+			_ => null, // Returning null will signal that the name was not found and throw appropritately.
+		});
 
-			// Currently can't find a better way to do this.
-			// WASM works, but the same registration needs to exist on the server.
-			NavigationManager nav;
-			try
-			{
-				nav = serviceProvider.GetRequiredService<NavigationManager>();
-			}
-			catch (InvalidOperationException)
-			{
-				nav = new FakeNavigationManager();
-			}
+	/// <summary>
+	/// Shortcut for <see cref="NavigationManager"/>.
+	/// </summary>
+	public static Uri ToAbsoluteUri(this IServiceProvider sp, string path)
+		=> sp.GetRequiredService<NavigationManager>().ToAbsoluteUri(path);
 
-			return [
-				// Hub 1 (just for demonstration, doesn't actually exist)
-				KeyValuePair.Create("hub1",
-					new HubConnectionBuilder()
-					.WithUrl(nav.ToAbsoluteUri("/hub/hub1"))),
+	public static IServiceCollection AddCustomAppHubConnectionsExample(this IServiceCollection services)
+		=> services
+		.AddScopedHubConnectionProvider()
+		.AddNamedScopedHubConnectionFactory(serviceProvider => hubName => hubName switch
+		{
+			"hub1" => (serviceProvider.ToAbsoluteUri("/hub/hub1"),
+				uri => new HubConnectionBuilder().WithAutomaticReconnect().WithUrl(uri)
+			),
 
-				// Counter
-				KeyValuePair.Create("counter",
-					new HubConnectionBuilder()
-					.WithAutomaticReconnect()
-					.WithUrl(nav.ToAbsoluteUri("/hub/counter")))
-			];
+			"counter" => (serviceProvider.ToAbsoluteUri("/hub/counter"),
+				uri => new HubConnectionBuilder().WithStatefulReconnect().WithUrl(uri)
+			),
+
+			_ => (null, null)
 		});
 }
+

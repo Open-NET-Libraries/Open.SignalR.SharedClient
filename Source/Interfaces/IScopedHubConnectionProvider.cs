@@ -8,8 +8,20 @@ public interface IScopedHubConnectionProvider
 	/// <summary>
 	/// Gets a <see cref="IScopedHubConnection"/> instance for the specified hub path.
 	/// </summary>
-	IScopedHubConnection GetConnectionFor(string hubUrl);
+	IScopedHubConnection GetConnectionFor([StringSyntax(StringSyntaxAttribute.Uri)] string hubUrl);
 
+	/// <inheritdoc cref="GetConnectionFor(string)"/>
+	IScopedHubConnection GetConnectionFor(Uri hubUri);
+
+	/// <inheritdoc cref="GetConnectionFor(string)"/>
+	internal IScopedHubConnection GetConnectionFor(UriOrUrlString hubUri, Func<Uri, IHubConnectionBuilder> factory);
+}
+
+/// <summary>
+/// Provides <see cref="IScopedHubConnection"/> instances for named hubs.
+/// </summary>
+public interface INamedScopedHubConnectionFactory
+{
 	/// <summary>
 	/// Gets a <see cref="IScopedHubConnection"/> instance by the configured hub name.
 	/// </summary>

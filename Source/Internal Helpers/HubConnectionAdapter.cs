@@ -13,12 +13,6 @@ internal class HubConnectionAdapter : IHubConnectionAdapter
 		conn.Reconnected += OnReconnected;
 	}
 
-	public HubConnectionAdapter([StringSyntax(StringSyntaxAttribute.Uri)] string hub)
-		: this(new HubConnectionBuilder()
-			.WithUrl(hub)
-			.WithAutomaticReconnect())
-	{ }
-
 	private readonly Lock _sync = new();
 
 	private Task? _startAsync;
