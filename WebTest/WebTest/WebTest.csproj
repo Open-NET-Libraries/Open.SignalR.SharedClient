@@ -8,7 +8,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\WebTest.Client\WebTest.Client.csproj" />
-    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="9.0.1" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="9.0.21" />
     <PackageReference Include="Open.ChannelExtensions" Version="9.0.0" />
   </ItemGroup>
 
